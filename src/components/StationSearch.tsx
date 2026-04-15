@@ -56,7 +56,12 @@ export default function StationSearch({ onSelect, label, placeholder, id, autoFo
               };
             });
           
-          setResults(stations);
+          // Deduplication: Remove duplicate IDs, but keep if mode is different
+          const uniqueStations = stations.filter((v, i, a) => 
+            a.findIndex(t => t.stop_id === v.stop_id && t.mot === v.mot) === i
+          );
+          
+          setResults(uniqueStations);
           setIsOpen(true);
         }
       } catch (error) {
@@ -104,9 +109,9 @@ export default function StationSearch({ onSelect, label, placeholder, id, autoFo
             exit={{ opacity: 0, y: -10 }}
             className="absolute w-full mt-2 glass rounded-2xl overflow-hidden shadow-2xl z-50"
           >
-            {results.map((station) => (
+            {results.map((station, index) => (
               <button
-                key={station.stop_id}
+                key={`${station.stop_id}-${station.mot || ''}-${index}`}
                 onClick={() => {
                   onSelect(station, label.toLowerCase().includes('origin') ? 'origin' : 'destination');
                   setQuery(station.stop_name);

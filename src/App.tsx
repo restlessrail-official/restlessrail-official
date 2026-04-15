@@ -5,6 +5,7 @@ import StationSearch from './components/StationSearch';
 import TrainCard from './components/TrainCard';
 import { MapComponent } from './components/MapComponent';
 import { FavoriteTrips } from './components/FavoriteTrips';
+import TripOverview from './components/TripOverview';
 import { cn } from './lib/utils';
 import { Station, TrainUpdate, TransportMode } from './types';
 import { supabase } from './lib/supabase';
@@ -133,6 +134,7 @@ export default function App() {
   const [trains, setTrains] = useState<TrainUpdate[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [selectedTrip, setSelectedTrip] = useState<TrainUpdate | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'list' | 'map' | 'favorites'>('list');
   const [transportMode, setTransportMode] = useState<TransportMode>('train');
@@ -495,12 +497,16 @@ export default function App() {
                 {/* Train List */}
                 <div className="grid gap-4">
                   {trains.length > 0 ? (
-                    trains.map((train, index) => (
+                    trains.filter((v, i, a) => a.findIndex(t => t.tripId === v.tripId && t.stopId === v.stopId) === i).map((train, index) => (
                       <div 
-                        key={train.tripId + train.stopId} 
+                        key={`${train.tripId}-${train.stopId}-${index}`} 
                         onClick={() => {
-                          setSelectedTripId(train.tripId);
-                          setActiveTab('map');
+                          if (originStation && destinationStation) {
+                            setSelectedTrip(train);
+                          } else {
+                            setSelectedTripId(train.tripId);
+                            setActiveTab('map');
+                          }
                         }}
                         className="cursor-pointer"
                       >
@@ -566,6 +572,16 @@ export default function App() {
             )}
           </AnimatePresence>
         </section>
+
+        {/* Trip Overview Overlay */}
+        <AnimatePresence>
+          {selectedTrip && (
+            <TripOverview 
+              trip={selectedTrip} 
+              onClose={() => setSelectedTrip(null)} 
+            />
+          )}
+        </AnimatePresence>
 
         {/* Footer */}
         <footer className="mt-24 pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 text-white/20 text-sm">

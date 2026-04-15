@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Clock, MapPin, Navigation, BookmarkPlus, Train as TrainIcon, Bus, Anchor, TramFront, Footprints, Ship } from 'lucide-react';
+import { Clock, MapPin, Navigation, BookmarkPlus, Train as TrainIcon, Bus, Anchor, TramFront, Footprints, Ship, ArrowRight, Info } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { TrainUpdate } from '../types';
 import { supabase } from '../lib/supabase';
@@ -288,36 +288,65 @@ export default function TrainCard({ train, index, originName, destinationName, d
             {train.minutesUntil <= 0 ? "NOW" : `${train.minutesUntil}`}
             {train.minutesUntil > 0 && <span className="text-sm font-medium ml-1 text-white/40">min</span>}
           </div>
-          <div className="text-xs text-white/30 font-mono flex items-center justify-end gap-1 mt-1">
-            <Clock className="w-3 h-3" />
-            {new Date(train.arrivalTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          <div className="text-xs text-white/30 font-mono flex flex-col items-end gap-0.5 mt-1">
+            <div className="flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              <span>Est: {new Date(train.arrivalTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            {train.destArrivalTime && (
+              <div className="text-[9px] opacity-50">
+                Arr: {new Date(train.destArrivalTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {train.legs && train.legs.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-white/5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Journey Timeline</div>
+        <div className="mt-6 pt-6 border-t border-white/5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Journey Overview</div>
+            <div className="text-[10px] text-neon-green uppercase tracking-widest font-bold">
+              {(train.legs?.length || 1) - 1} Transfers • {train.legs.reduce((acc: number, leg: any) => acc + (leg.stopSequence?.length || 0), 0)} Stops
+            </div>
           </div>
+          
           <div className="flex flex-wrap items-center gap-3">
-            {train.legs.map((leg: any, i: number) => (
-              <React.Fragment key={i}>
-                <div className="flex items-center gap-2 px-3 py-1.5 glass rounded-lg text-xs relative overflow-hidden">
-                  <div className={cn("absolute left-0 top-0 bottom-0 w-1", getTimelineDot(leg.transportation?.product?.class))} />
-                  <span className="text-lg ml-1">
-                    {getModeEmoji(leg.transportation?.product?.class)}
-                  </span>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-white/80">{leg.transportation.disassembledName || leg.transportation.name}</span>
-                    <span className="text-[10px] text-white/40">{Math.round(leg.duration / 60)}m</span>
+            {train.legs.map((leg: any, i: number) => {
+              const origin = leg.stopSequence?.[0];
+              const destination = leg.stopSequence?.[leg.stopSequence?.length - 1];
+              const isWalk = leg.transportation?.product?.class === 100;
+
+              return (
+                <React.Fragment key={i}>
+                  <div className="flex items-center gap-3 px-4 py-2 glass rounded-xl text-xs relative overflow-hidden group/leg">
+                    <div className={cn("absolute left-0 top-0 bottom-0 w-1", getTimelineDot(leg.transportation?.product?.class))} />
+                    <span className="text-xl">
+                      {getModeEmoji(leg.transportation?.product?.class)}
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-white/90">
+                        {isWalk ? "Walk" : (leg.transportation.disassembledName || leg.transportation.name)}
+                      </span>
+                      <div className="flex items-center gap-2 text-[9px] text-white/40 uppercase font-bold">
+                        <span>{Math.round(leg.duration / 60)}m</span>
+                        {!isWalk && origin?.properties?.stopPostName && (
+                          <span className="text-neon-green">Stand {origin.properties.stopPostName}</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                {i < train.legs.length - 1 && (
-                  <div className={cn("w-4 h-[2px] rounded-full", getTimelineDot(train.legs[i+1]?.transportation?.product?.class))} />
-                )}
-              </React.Fragment>
-            ))}
+                  {i < train.legs.length - 1 && (
+                    <ArrowRight className="w-3 h-3 text-white/20" />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2 text-[10px] text-white/20 italic">
+            <Info className="w-3 h-3" />
+            Click for full step-by-step directions and live map
           </div>
         </div>
       )}

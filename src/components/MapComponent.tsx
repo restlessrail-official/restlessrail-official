@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import { Train, Bus, Ship, TramFront } from 'lucide-react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -31,6 +31,7 @@ interface Vehicle {
 interface MapComponentProps {
   selectedTripId?: string | null;
   activeTripIds?: string[];
+  tripPath?: [number, number][];
 }
 
 const createVehicleIcon = (routeId: string, isHighlighted: boolean) => {
@@ -83,7 +84,7 @@ const RecenterMap = ({ lat, lon }: { lat: number, lon: number }) => {
   return null;
 };
 
-export const MapComponent: React.FC<MapComponentProps> = ({ selectedTripId, activeTripIds = [] }) => {
+export const MapComponent: React.FC<MapComponentProps> = ({ selectedTripId, activeTripIds = [], tripPath = [] }) => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -104,7 +105,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({ selectedTripId, acti
     return () => clearInterval(interval);
   }, []);
 
-  // Filter vehicles to show only those on the searched route if activeTripIds is provided
+  // Filter vehicles: Show ALL vehicles if no specific trip is highlighted, 
+  // but prioritize showing vehicles on the active network view.
   const filteredVehicles = activeTripIds.length > 0 
     ? vehicles.filter(v => activeTripIds.includes(v.tripId))
     : vehicles;
@@ -132,6 +134,21 @@ export const MapComponent: React.FC<MapComponentProps> = ({ selectedTripId, acti
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
         
+        {tripPath.length > 0 && (
+          <>
+            <Polyline 
+              positions={tripPath} 
+              color="#39ff14" 
+              weight={4} 
+              opacity={0.8} 
+              dashArray="10, 10"
+            />
+            <Marker position={tripPath[0]} icon={L.divIcon({ html: '<div class="w-3 h-3 bg-neon-green rounded-full border-2 border-midnight"></div>', className: '' })} />
+            <Marker position={tripPath[tripPath.length - 1]} icon={L.divIcon({ html: '<div class="w-3 h-3 bg-red-500 rounded-full border-2 border-midnight"></div>', className: '' })} />
+            <RecenterMap lat={tripPath[0][0]} lon={tripPath[0][1]} />
+          </>
+        )}
+        
         {filteredVehicles.map((vehicle) => {
           const isSelected = vehicle.tripId === selectedTripId;
           return (
@@ -144,7 +161,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ selectedTripId, acti
                 <div className="text-midnight font-sans p-1">
                   <div className="font-bold border-b border-gray-200 mb-1 pb-1 flex items-center gap-2">
                     <Train className="w-4 h-4 text-orange-500" />
-                    <span>Vehicle {vehicle.id}</span>
+                    <span>{vehicle.routeId} Service</span>
                   </div>
                   <div className="text-xs text-gray-600 flex flex-col gap-0.5">
                     <div className="flex justify-between gap-4">
